@@ -1,5 +1,5 @@
 {
   "date": "2026-01-03",
   "games": [],
-  "note": "could not load player splits"
+  "note": "games=espn url=https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260103 | players=playerindex_failed"
 }
