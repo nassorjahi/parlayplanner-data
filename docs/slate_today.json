@@ -1,5 +1,5 @@
 {
   "date": "2026-01-03",
   "games": [],
-  "note": "scoreboard returned NULL/empty"
+  "note": "nba_teams returned empty"
 }
