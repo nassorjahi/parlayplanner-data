@@ -23,7 +23,9 @@ top5 <- function(df, col) {
     )
 }
 
-safe_str <- function(x, maxn = 300) {
+`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
+
+safe_str <- function(x, maxn = 200) {
   x <- as.character(x)
   if (is.na(x) || !nzchar(x)) return("")
   substr(x, 1, maxn)
@@ -43,10 +45,9 @@ game_date_str <- format(today, "%Y-%m-%d")
 message("Date: ", game_date_str)
 message("Season: ", season)
 
-# ---------- ESPN schedule (robust) ----------
-# We try TWO ESPN endpoints and parse as LIST (simplifyVector=FALSE)
+# ---------- ESPN games (robust) ----------
 get_games_from_espn <- function(date_str) {
-  d <- gsub("-", "", date_str)  # YYYYMMDD
+  d <- gsub("-", "", date_str)
   
   urls <- c(
     paste0("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=", d),
@@ -57,9 +58,7 @@ get_games_from_espn <- function(date_str) {
   
   for (url in urls) {
     resp <- tryCatch(
-      request(url) |>
-        req_timeout(30) |>
-        req_perform(),
+      request(url) |> req_timeout(30) |> req_perform(),
       error = function(e) {
         last_note <<- paste0("ESPN request error: ", e$message)
         NULL
@@ -74,25 +73,20 @@ get_games_from_espn <- function(date_str) {
       next
     }
     
-    js <- tryCatch(
-      jsonlite::fromJSON(body_txt, simplifyVector = FALSE),
-      error = function(e) {
-        last_note <<- paste0("ESPN JSON parse error: ", e$message, " body=", safe_str(body_txt, 120))
-        NULL
-      }
-    )
-    if (is.null(js)) next
+    js <- tryCatch(fromJSON(body_txt, simplifyVector = FALSE), error = function(e) NULL)
+    if (is.null(js)) {
+      last_note <- paste0("ESPN JSON parse error body=", safe_str(body_txt, 120))
+      next
+    }
     
     events <- js$events
     if (is.null(events) || length(events) == 0) {
-      last_note <- paste0("ESPN no events (url ok) :: ", url)
+      last_note <- paste0("ESPN no events :: ", url)
       next
     }
     
     rows <- list()
-    
     for (ev in events) {
-      # competitions is usually a list; take first
       comp <- NULL
       if (!is.null(ev$competitions) && length(ev$competitions) >= 1) comp <- ev$competitions[[1]]
       if (is.null(comp)) next
@@ -100,7 +94,6 @@ get_games_from_espn <- function(date_str) {
       competitors <- comp$competitors
       if (is.null(competitors) || length(competitors) < 2) next
       
-      # Find home/away
       home_abbr <- NULL
       away_abbr <- NULL
       
@@ -108,7 +101,6 @@ get_games_from_espn <- function(date_str) {
         ha <- cpt$homeAway
         ab <- NULL
         if (!is.null(cpt$team) && !is.null(cpt$team$abbreviation)) ab <- cpt$team$abbreviation
-        
         if (!is.null(ha) && !is.null(ab)) {
           if (ha == "home") home_abbr <- ab
           if (ha == "away") away_abbr <- ab
@@ -126,83 +118,98 @@ get_games_from_espn <- function(date_str) {
     }
     
     if (length(rows) == 0) {
-      last_note <- paste0("ESPN parsed but found 0 home/away games :: ", url)
+      last_note <- paste0("ESPN parsed but found 0 games :: ", url)
       next
     }
     
     out <- bind_rows(rows) %>% distinct(ROAD_ABBR, HOME_ABBR, id, title)
     if (nrow(out) == 0) {
-      last_note <- paste0("ESPN produced empty after distinct :: ", url)
+      last_note <- paste0("ESPN empty after distinct :: ", url)
       next
     }
     
-    return(list(games = out, note = paste0("source=espn url=", url)))
+    return(list(games = out, note = paste0("games=espn url=", url)))
   }
   
-  return(list(games = NULL, note = last_note %||% "no games from ESPN (unknown)"))
+  return(list(games = NULL, note = last_note %||% "ESPN failed"))
 }
-
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
 
 espn <- get_games_from_espn(game_date_str)
 games_today <- espn$games
-source_note <- espn$note
+note_games  <- espn$note
 
 if (is.null(games_today) || nrow(games_today) == 0) {
-  write_json(list(date = game_date_str, games = list(), note = source_note))
+  write_json(list(date = game_date_str, games = list(), note = paste0(note_games)))
   quit(save = "no", status = 0)
 }
 
-# ---------- player splits (home/road) ----------
-pull_splits <- function(location_value) {
+# ---------- Player stats (more reliable): nba_playerindex ----------
+# Returns season per-game stats by player, includes TEAM_ABBREVIATION
+get_player_stats <- function() {
   x <- tryCatch(
-    nba_leaguedashplayerstats(
-      season       = season,
-      season_type  = "Regular Season",
-      per_mode     = "PerGame",
-      measure_type = "Base",
-      location     = location_value
+    nba_playerindex(
+      season = season,
+      season_type = "Regular Season"
     ),
     error = function(e) NULL
   )
   
   if (is.null(x) || length(x) == 0) return(NULL)
   
-  raw <- x[["LeagueDashPlayerStats"]]
+  # Different hoopR versions may name the table slightly differently; try common keys
+  raw <- x[["PlayerIndex"]] %||% x[["LeaguePlayerIndex"]] %||% x[[1]]
   if (is.null(raw) || nrow(raw) == 0) return(NULL)
   
-  raw %>%
+  # Normalize expected columns (best-effort)
+  nm <- names(raw)
+  
+  # Some versions use "MIN" as total minutes; "MPG" for per-game. Prefer MPG if present.
+  min_col <- if ("MPG" %in% nm) "MPG" else if ("MIN" %in% nm) "MIN" else NA_character_
+  if (is.na(min_col)) return(NULL)
+  
+  # FG3M sometimes is "FG3M" or "FG3M_PG" in various feeds; try both.
+  fg3m_col <- if ("FG3M" %in% nm) "FG3M" else if ("FG3M_PG" %in% nm) "FG3M_PG" else NA_character_
+  
+  # PTS/REB/AST usually exist; if not, stop.
+  if (!("PTS" %in% nm && "REB" %in% nm && "AST" %in% nm)) return(NULL)
+  if (!("TEAM_ABBREVIATION" %in% nm || "TEAM" %in% nm)) return(NULL)
+  
+  team_col <- if ("TEAM_ABBREVIATION" %in% nm) "TEAM_ABBREVIATION" else "TEAM"
+  
+  out <- raw %>%
     mutate(
-      GP   = as.numeric(GP),
-      MIN  = as.numeric(MIN),
+      TEAM_ABBREVIATION = as.character(.data[[team_col]]),
+      PLAYER_NAME       = as.character(PLAYER_NAME),
+      MIN  = as.numeric(.data[[min_col]]),
       PTS  = as.numeric(PTS),
-      FG3M = as.numeric(FG3M),
       REB  = as.numeric(REB),
-      AST  = as.numeric(AST)
-    )
+      AST  = as.numeric(AST),
+      FG3M = if (!is.na(fg3m_col)) as.numeric(.data[[fg3m_col]]) else NA_real_
+    ) %>%
+    select(TEAM_ABBREVIATION, PLAYER_NAME, MIN, PTS, REB, AST, FG3M) %>%
+    filter(!is.na(TEAM_ABBREVIATION), TEAM_ABBREVIATION != "")
+  
+  out
 }
 
-home_stats <- pull_splits("Home")
-road_stats <- pull_splits("Road")
-
-if (is.null(home_stats) || is.null(road_stats)) {
-  write_json(list(date = game_date_str, games = list(), note = "could not load player splits"))
+player_stats <- get_player_stats()
+if (is.null(player_stats) || nrow(player_stats) == 0) {
+  write_json(list(date = game_date_str, games = list(), note = paste0(note_games, " | players=playerindex_failed")))
   quit(save = "no", status = 0)
 }
 
-# ---------- build games JSON (same schema) ----------
+note_players <- "players=nba_playerindex(season_avgs)"
+
+# ---------- build games JSON ----------
 games_out <- list()
 
 for (i in seq_len(nrow(games_today))) {
   g <- games_today[i, ]
-  
   home_abbr <- g$HOME_ABBR
   road_abbr <- g$ROAD_ABBR
   
-  home_tbl <- home_stats %>% filter(TEAM_ABBREVIATION == home_abbr)
-  road_tbl <- road_stats %>% filter(TEAM_ABBREVIATION == road_abbr)
-  
-  game_df <- bind_rows(home_tbl, road_tbl) %>%
+  game_df <- player_stats %>%
+    filter(TEAM_ABBREVIATION %in% c(home_abbr, road_abbr)) %>%
     # Keep your rule: MIN >= 18
     filter(is.na(MIN) | MIN >= 18)
   
@@ -219,7 +226,7 @@ for (i in seq_len(nrow(games_today))) {
 write_json(list(
   date  = game_date_str,
   games = games_out,
-  note  = source_note
+  note  = paste0(note_games, " | ", note_players, " | filter=MIN>=18")
 ))
 
-message("✅ Wrote docs/slate_today.json with ", length(games_out), " games (", source_note, ")")
+message("✅ Wrote docs/slate_today.json with ", length(games_out), " games")
