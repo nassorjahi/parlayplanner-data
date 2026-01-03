@@ -3,11 +3,20 @@ library(dplyr)
 library(tibble)
 library(httr2)
 
-SCRIPT_VERSION <- "ESPN_LEADERS_V1"
+SCRIPT_VERSION <- "NBA_DATA_SCOREBOARD_V1"
+
+out_path <- "docs/slate_today.json"
 
 write_json <- function(obj) {
   dir.create("docs", showWarnings = FALSE, recursive = TRUE)
-  writeLines(toJSON(obj, auto_unbox = TRUE, pretty = TRUE), "docs/slate_today.json")
+  writeLines(toJSON(obj, auto_unbox = TRUE, pretty = TRUE), out_path)
+}
+
+read_existing <- function() {
+  if (!file.exists(out_path)) return(NULL)
+  txt <- tryCatch(readLines(out_path, warn = FALSE), error = function(e) NULL)
+  if (is.null(txt) || length(txt) == 0) return(NULL)
+  tryCatch(fromJSON(paste(txt, collapse = "\n"), simplifyVector = FALSE), error = function(e) NULL)
 }
 
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
@@ -39,82 +48,96 @@ safe_req_json <- function(url) {
 
 today <- Sys.Date()
 date_str <- format(today, "%Y-%m-%d")
-espn_date <- gsub("-", "", date_str)
+yyyymmdd <- gsub("-", "", date_str)
 
-# 1) Scoreboard
-score_urls <- c(
-  paste0("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=", espn_date),
-  paste0("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/scoreboard?dates=", espn_date)
-)
+# -------------------------
+# 1) NBA DATA scoreboard (reliable)
+# -------------------------
+nba_score_url <- paste0("https://data.nba.com/data/10s/prod/v1/", yyyymmdd, "/scoreboard.json")
+sb <- safe_req_json(nba_score_url)
 
-score <- NULL
-score_url_used <- NULL
-for (u in score_urls) {
-  js <- safe_req_json(u)
-  if (!is.null(js) && !is.null(js$events) && length(js$events) > 0) {
-    score <- js
-    score_url_used <- u
-    break
+if (is.null(sb) || is.null(sb$games) || length(sb$games) == 0) {
+  existing <- read_existing()
+  if (!is.null(existing)) {
+    existing$note <- paste0(
+      "version=", SCRIPT_VERSION,
+      " | nba_data_scoreboard_failed_keep_last",
+      " | url=", nba_score_url
+    )
+    write_json(existing)
+    quit(save = "no", status = 0)
+  } else {
+    write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | nba_data_scoreboard_failed_empty")))
+    quit(save = "no", status = 0)
   }
-}
-
-if (is.null(score)) {
-  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN scoreboard failed/empty")))
-  quit(save = "no", status = 0)
-}
-
-events <- score$events
-if (is.null(events) || length(events) == 0) {
-  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN scoreboard had no events")))
-  quit(save = "no", status = 0)
 }
 
 games_tbl <- list()
 
-for (ev in events) {
-  comp <- NULL
-  if (!is.null(ev$competitions) && length(ev$competitions) >= 1) comp <- ev$competitions[[1]]
-  if (is.null(comp)) next
+for (g in sb$games) {
+  # Team abbreviations are in hTeam$triCode and vTeam$triCode
+  home_abbr <- g$hTeam$triCode %||% NA_character_
+  away_abbr <- g$vTeam$triCode %||% NA_character_
+  if (is.na(home_abbr) || is.na(away_abbr)) next
   
-  competitors <- comp$competitors
-  if (is.null(competitors) || length(competitors) < 2) next
-  
-  home <- NULL
-  away <- NULL
-  
-  for (cpt in competitors) {
-    ha <- cpt$homeAway
-    tm <- cpt$team
-    if (is.null(ha) || is.null(tm)) next
-    if (ha == "home") home <- tm
-    if (ha == "away") away <- tm
-  }
-  
-  if (is.null(home) || is.null(away)) next
-  if (is.null(home$id) || is.null(away$id)) next
-  if (is.null(home$abbreviation) || is.null(away$abbreviation)) next
+  # Keep NBA teamId for possible future expansions
+  home_id <- g$hTeam$teamId %||% ""
+  away_id <- g$vTeam$teamId %||% ""
   
   games_tbl[[length(games_tbl) + 1]] <- tibble(
-    HOME_ID   = as.character(home$id),
-    HOME_ABBR = as.character(home$abbreviation),
-    AWAY_ID   = as.character(away$id),
-    AWAY_ABBR = as.character(away$abbreviation),
-    id        = paste0(as.character(away$abbreviation), "@", as.character(home$abbreviation)),
-    title     = paste0(as.character(away$abbreviation), " vs ", as.character(home$abbreviation))
+    HOME_ID = as.character(home_id),
+    HOME_ABBR = as.character(home_abbr),
+    AWAY_ID = as.character(away_id),
+    AWAY_ABBR = as.character(away_abbr),
+    id = paste0(away_abbr, "@", home_abbr),
+    title = paste0(away_abbr, " vs ", home_abbr)
   )
 }
 
 games_df <- bind_rows(games_tbl) %>% distinct(id, .keep_all = TRUE)
 
 if (nrow(games_df) == 0) {
-  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN events parsed but no games extracted")))
+  existing <- read_existing()
+  if (!is.null(existing)) {
+    existing$note <- paste0("version=", SCRIPT_VERSION, " | nba_data_parsed_no_games_keep_last")
+    write_json(existing)
+  } else {
+    write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | nba_data_parsed_no_games")))
+  }
   quit(save = "no", status = 0)
 }
 
-# 2) Team leaders
-get_team_leaders <- function(team_id) {
-  url <- paste0("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/", team_id, "/leaders")
-  safe_req_json(url)
+# -------------------------
+# 2) ESPN Team Leaders (best-effort)
+# If this fails, we still output games + empty lists OR keep-last
+# -------------------------
+get_team_leaders <- function(team_abbr) {
+  # ESPN team search endpoint to resolve team id by abbreviation
+  search_url <- paste0("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams?limit=1000")
+  teams_js <- safe_req_json(search_url)
+  if (is.null(teams_js) || is.null(teams_js$sports)) return(NULL)
+  
+  # Find team id
+  team_id <- NULL
+  for (sp in teams_js$sports) {
+    if (is.null(sp$leagues) || length(sp$leagues) == 0) next
+    lg <- sp$leagues[[1]]
+    if (is.null(lg$teams) || length(lg$teams) == 0) next
+    
+    for (twrap in lg$teams) {
+      tm <- twrap$team
+      if (is.null(tm$abbreviation) || is.null(tm$id)) next
+      if (toupper(tm$abbreviation) == toupper(team_abbr)) {
+        team_id <- as.character(tm$id)
+        break
+      }
+    }
+  }
+  
+  if (is.null(team_id)) return(NULL)
+  
+  leaders_url <- paste0("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/", team_id, "/leaders")
+  safe_req_json(leaders_url)
 }
 
 flatten_leaders <- function(js) {
@@ -171,8 +194,8 @@ leader_failures <- 0
 for (i in seq_len(nrow(games_df))) {
   g <- games_df[i, ]
   
-  away_js <- get_team_leaders(g$AWAY_ID)
-  home_js <- get_team_leaders(g$HOME_ID)
+  away_js <- get_team_leaders(g$AWAY_ABBR)
+  home_js <- get_team_leaders(g$HOME_ABBR)
   
   away_flat <- flatten_leaders(away_js)
   home_flat <- flatten_leaders(home_js)
@@ -193,10 +216,20 @@ for (i in seq_len(nrow(games_df))) {
 
 note <- paste0(
   "version=", SCRIPT_VERSION,
-  " | games=espn url=", score_url_used,
+  " | games=nba_data url=", nba_score_url,
   " | players=espn_team_leaders",
   " | leader_failures=", leader_failures
 )
+
+# If leaders fail for ALL games, keep last good instead of going blank
+if (leader_failures >= nrow(games_df)) {
+  existing <- read_existing()
+  if (!is.null(existing) && !is.null(existing$games) && length(existing$games) > 0) {
+    existing$note <- paste0(note, " | ALL_LEADERS_FAILED_KEEP_LAST")
+    write_json(existing)
+    quit(save = "no", status = 0)
+  }
+}
 
 write_json(list(date = date_str, games = games_out, note = note))
 message("✅ ", note)
