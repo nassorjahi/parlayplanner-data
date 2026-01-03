@@ -3,14 +3,16 @@ library(dplyr)
 library(tibble)
 library(httr2)
 
-# ---------- helpers ----------
+SCRIPT_VERSION <- "ESPN_LEADERS_V1"
+
 write_json <- function(obj) {
   dir.create("docs", showWarnings = FALSE, recursive = TRUE)
   writeLines(toJSON(obj, auto_unbox = TRUE, pretty = TRUE), "docs/slate_today.json")
 }
 
+`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
+
 num_from <- function(x) {
-  # Extract first numeric from strings like "26.4" or "2.1" or "26.4 PPG"
   if (is.null(x)) return(NA_real_)
   s <- as.character(x)
   m <- regmatches(s, regexpr("[-+]?[0-9]*\\.?[0-9]+", s))
@@ -35,12 +37,11 @@ safe_req_json <- function(url) {
   tryCatch(fromJSON(txt, simplifyVector = FALSE), error = function(e) NULL)
 }
 
-# ---------- date ----------
 today <- Sys.Date()
 date_str <- format(today, "%Y-%m-%d")
 espn_date <- gsub("-", "", date_str)
 
-# ---------- 1) ESPN scoreboard -> today's games ----------
+# 1) Scoreboard
 score_urls <- c(
   paste0("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=", espn_date),
   paste0("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/scoreboard?dates=", espn_date)
@@ -58,17 +59,16 @@ for (u in score_urls) {
 }
 
 if (is.null(score)) {
-  write_json(list(date = date_str, games = list(), note = "ESPN scoreboard failed/empty"))
+  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN scoreboard failed/empty")))
   quit(save = "no", status = 0)
 }
 
 events <- score$events
 if (is.null(events) || length(events) == 0) {
-  write_json(list(date = date_str, games = list(), note = "ESPN scoreboard had no events"))
+  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN scoreboard had no events")))
   quit(save = "no", status = 0)
 }
 
-# Extract games: team ids + abbreviations
 games_tbl <- list()
 
 for (ev in events) {
@@ -107,36 +107,24 @@ for (ev in events) {
 games_df <- bind_rows(games_tbl) %>% distinct(id, .keep_all = TRUE)
 
 if (nrow(games_df) == 0) {
-  write_json(list(date = date_str, games = list(), note = "ESPN events parsed but no games extracted"))
+  write_json(list(date = date_str, games = list(), note = paste0("version=", SCRIPT_VERSION, " | ESPN events parsed but no games extracted")))
   quit(save = "no", status = 0)
 }
 
-# ---------- 2) ESPN team leaders -> top 5 categories ----------
-# Endpoint pattern:
-# https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{TEAM_ID}/leaders
+# 2) Team leaders
 get_team_leaders <- function(team_id) {
-  url <- paste0(
-    "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/",
-    team_id,
-    "/leaders"
-  )
-  js <- safe_req_json(url)
-  if (is.null(js)) return(NULL)
-  js
+  url <- paste0("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/", team_id, "/leaders")
+  safe_req_json(url)
 }
 
-# Flatten ESPN leaders into a searchable table
 flatten_leaders <- function(js) {
   if (is.null(js$categories) || length(js$categories) == 0) return(tibble())
-  
   rows <- list()
   
   for (cat in js$categories) {
-    # cat$name, cat$displayName sometimes
     if (is.null(cat$leaders) || length(cat$leaders) == 0) next
     
     for (block in cat$leaders) {
-      # block can represent a stat type with list of leaders
       stat_name <- block$name %||% block$displayName %||% ""
       stat_key  <- tolower(gsub("[^a-z0-9]+", "", stat_name))
       
@@ -145,11 +133,9 @@ flatten_leaders <- function(js) {
       for (ld in block$leaders) {
         ath <- ld$athlete
         if (is.null(ath) || is.null(ath$displayName)) next
-        
-        val <- ld$value %||% ld$displayValue %||% ld$displayValueShort %||% ld$displayValueAbbrev %||% ""
+        val <- ld$value %||% ld$displayValue %||% ""
         rows[[length(rows) + 1]] <- tibble(
           stat_key = stat_key,
-          stat_name = stat_name,
           playerName = as.character(ath$displayName),
           value = num_from(val)
         )
@@ -161,18 +147,12 @@ flatten_leaders <- function(js) {
   out %>% filter(!is.na(value))
 }
 
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
-
 pick_top5_for <- function(df, patterns) {
-  # patterns: vector of regex-like keys we’ll match against stat_key
-  # We pick the first pattern that has data.
   for (p in patterns) {
     x <- df %>% filter(grepl(p, stat_key))
     if (nrow(x) > 0) {
       return(
-        x %>%
-          arrange(desc(value)) %>%
-          slice_head(n = 5) %>%
+        x %>% arrange(desc(value)) %>% slice_head(n = 5) %>%
           transmute(playerName = playerName, value = value)
       )
     }
@@ -180,29 +160,24 @@ pick_top5_for <- function(df, patterns) {
   tibble(playerName = character(), value = numeric())
 }
 
-# Pattern sets (ESPN naming varies; we match broadly)
 PTS_PATTERNS  <- c("pointspergame", "ppg", "points")
 REB_PATTERNS  <- c("reboundspergame", "rpg", "rebounds")
 AST_PATTERNS  <- c("assistspergame", "apg", "assists")
-FG3M_PATTERNS <- c("threepointfieldgoalsmadepergame", "threepointmadepergame", "3pm", "threepointfieldgoalsmade", "threepoint")
+FG3M_PATTERNS <- c("threepointfieldgoalsmadepergame","threepointmadepergame","threepointfieldgoalsmade","threepoint")
 
-# ---------- build games output ----------
 games_out <- list()
 leader_failures <- 0
 
 for (i in seq_len(nrow(games_df))) {
   g <- games_df[i, ]
   
-  # Pull leaders for both teams (away + home)
   away_js <- get_team_leaders(g$AWAY_ID)
   home_js <- get_team_leaders(g$HOME_ID)
   
   away_flat <- flatten_leaders(away_js)
   home_flat <- flatten_leaders(home_js)
   
-  if (nrow(away_flat) == 0 || nrow(home_flat) == 0) {
-    leader_failures <- leader_failures + 1
-  }
+  if (nrow(away_flat) == 0 || nrow(home_flat) == 0) leader_failures <- leader_failures + 1
   
   combined <- bind_rows(away_flat, home_flat)
   
@@ -217,15 +192,11 @@ for (i in seq_len(nrow(games_df))) {
 }
 
 note <- paste0(
-  "games=espn url=", score_url_used,
+  "version=", SCRIPT_VERSION,
+  " | games=espn url=", score_url_used,
   " | players=espn_team_leaders",
   " | leader_failures=", leader_failures
 )
 
-write_json(list(
-  date  = date_str,
-  games = games_out,
-  note  = note
-))
-
-message("✅ Wrote docs/slate_today.json with ", length(games_out), " games")
+write_json(list(date = date_str, games = games_out, note = note))
+message("✅ ", note)
