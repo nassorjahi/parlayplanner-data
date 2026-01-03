@@ -1,5 +1,5 @@
 {
   "date": "2026-01-03",
   "games": [],
-  "note": "version=ESPN_LEADERS_V1 | ESPN scoreboard failed/empty"
+  "note": "version=NBA_DATA_SCOREBOARD_V1 | nba_data_scoreboard_failed_keep_last | url=https://data.nba.com/data/10s/prod/v1/20260103/scoreboard.json"
 }
