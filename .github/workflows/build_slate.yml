@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TZ: America/New_York
 
     steps:
       - name: Checkout
@@ -25,7 +27,7 @@ jobs:
 
       - name: Install R packages
         run: |
-          Rscript -e 'install.packages(c("hoopR","dplyr","jsonlite"), repos="https://cloud.r-project.org")'
+          Rscript -e 'install.packages(c("hoopR","dplyr","jsonlite","tibble","httr2"), repos="https://cloud.r-project.org")'
 
       - name: Build slate_today.json
         run: |

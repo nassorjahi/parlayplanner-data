@@ -2,6 +2,7 @@ library(hoopR)
 library(dplyr)
 library(jsonlite)
 library(tibble)
+library(httr2)
 
 # ---------- helpers ----------
 write_json <- function(obj) {
@@ -16,8 +17,10 @@ top5 <- function(df, col) {
   df %>%
     arrange(desc(.data[[col]])) %>%
     slice_head(n = 5) %>%
-    transmute(playerName = as.character(PLAYER_NAME),
-              value      = as.numeric(.data[[col]]))
+    transmute(
+      playerName = as.character(PLAYER_NAME),
+      value      = as.numeric(.data[[col]])
+    )
 }
 
 # ---------- date/season ----------
@@ -34,54 +37,62 @@ game_date_str <- format(today, "%Y-%m-%d")
 message("Date: ", game_date_str)
 message("Season: ", season)
 
-# ---------- schedule-based matchups (primary) ----------
-# Use league dash TEAM stats with date_from/date_to and parse MATCHUP like "ATL @ TOR"
-get_games_from_schedule <- function() {
-  x <- tryCatch(
-    nba_leaguedashteamstats(
-      season       = season,
-      season_type  = "Regular Season",
-      per_mode     = "PerGame",
-      measure_type = "Base",
-      date_from    = game_date_str,
-      date_to      = game_date_str
-    ),
+# ---------- ESPN schedule (reliable in cloud) ----------
+get_games_from_espn <- function(date_str) {
+  d <- gsub("-", "", date_str)  # ESPN wants YYYYMMDD
+  url <- paste0(
+    "https://site.web.api.espn.com/apis/v2/sports/basketball/nba/scoreboard?dates=",
+    d
+  )
+  
+  resp <- tryCatch(
+    request(url) |>
+      req_timeout(30) |>
+      req_perform(),
     error = function(e) NULL
   )
-  if (is.null(x) || length(x) == 0) return(NULL)
+  if (is.null(resp)) return(NULL)
   
-  raw <- x[["LeagueDashTeamStats"]]
-  if (is.null(raw) || nrow(raw) == 0) return(NULL)
-  if (!("MATCHUP" %in% names(raw))) return(NULL)
+  txt <- tryCatch(resp_body_string(resp), error = function(e) NULL)
+  if (is.null(txt) || !nzchar(txt)) return(NULL)
   
-  raw %>%
-    distinct(MATCHUP) %>%
-    mutate(MATCHUP = as.character(MATCHUP)) %>%
-    # Handle both "ATL @ TOR" and "TOR vs. ATL"
-    mutate(
-      ROAD_ABBR = case_when(
-        grepl("@", MATCHUP) ~ trimws(sub(" @.*$", "", MATCHUP)),
-        grepl("vs", MATCHUP, ignore.case = TRUE) ~ trimws(sub(" vs.*$", "", MATCHUP)),
-        TRUE ~ NA_character_
-      ),
-      HOME_ABBR = case_when(
-        grepl("@", MATCHUP) ~ trimws(sub("^.*@ ", "", MATCHUP)),
-        grepl("vs", MATCHUP, ignore.case = TRUE) ~ trimws(sub("^.*vs\\.\\s*", "", MATCHUP)),
-        TRUE ~ NA_character_
-      )
-    ) %>%
-    filter(!is.na(ROAD_ABBR), !is.na(HOME_ABBR)) %>%
-    distinct(ROAD_ABBR, HOME_ABBR) %>%
-    mutate(
-      id    = paste0(ROAD_ABBR, "@", HOME_ABBR),
-      title = paste0(ROAD_ABBR, " vs ", HOME_ABBR)
+  js <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = TRUE), error = function(e) NULL)
+  if (is.null(js) || is.null(js$events) || nrow(js$events) == 0) return(NULL)
+  
+  events <- js$events
+  
+  rows <- lapply(seq_len(nrow(events)), function(i) {
+    # competitions is a list-column; take first competition
+    comp <- events$competitions[[i]][[1]]
+    comps <- comp$competitors
+    
+    home_row <- comps[comps$homeAway == "home", ]
+    away_row <- comps[comps$homeAway == "away", ]
+    
+    if (nrow(home_row) == 0 || nrow(away_row) == 0) return(NULL)
+    
+    home_abbr <- home_row$team$abbreviation[[1]]
+    away_abbr <- away_row$team$abbreviation[[1]]
+    
+    tibble(
+      ROAD_ABBR = away_abbr,
+      HOME_ABBR = home_abbr,
+      id        = paste0(away_abbr, "@", home_abbr),
+      title     = paste0(away_abbr, " vs ", home_abbr)
     )
+  })
+  
+  out <- bind_rows(Filter(Negate(is.null), rows))
+  if (nrow(out) == 0) return(NULL)
+  
+  out %>% distinct(ROAD_ABBR, HOME_ABBR, id, title)
 }
 
-games_today <- get_games_from_schedule()
+games_today <- get_games_from_espn(game_date_str)
+source_note <- "espn_scoreboard"
 
 if (is.null(games_today) || nrow(games_today) == 0) {
-  write_json(list(date = game_date_str, games = list(), note = "no games from schedule endpoint"))
+  write_json(list(date = game_date_str, games = list(), note = "no games from ESPN endpoint"))
   quit(save = "no", status = 0)
 }
 
@@ -97,6 +108,7 @@ pull_splits <- function(location_value) {
     ),
     error = function(e) NULL
   )
+  
   if (is.null(x) || length(x) == 0) return(NULL)
   
   raw <- x[["LeagueDashPlayerStats"]]
@@ -121,7 +133,7 @@ if (is.null(home_stats) || is.null(road_stats)) {
   quit(save = "no", status = 0)
 }
 
-# ---------- build games json ----------
+# ---------- build games JSON (same schema) ----------
 games_out <- list()
 
 for (i in seq_len(nrow(games_today))) {
@@ -134,6 +146,7 @@ for (i in seq_len(nrow(games_today))) {
   road_tbl <- road_stats %>% filter(TEAM_ABBREVIATION == road_abbr)
   
   game_df <- bind_rows(home_tbl, road_tbl) %>%
+    # Keep your rule: MIN >= 18 (filter low-rotation noise)
     filter(is.na(MIN) | MIN >= 18)
   
   games_out[[length(games_out) + 1]] <- list(
@@ -147,9 +160,9 @@ for (i in seq_len(nrow(games_today))) {
 }
 
 write_json(list(
-  date = game_date_str,
+  date  = game_date_str,
   games = games_out,
-  note = "source=schedule_only"
+  note  = paste0("source=", source_note)
 ))
 
-message("✅ Wrote docs/slate_today.json with ", length(games_out), " games (schedule_only)")
+message("✅ Wrote docs/slate_today.json with ", length(games_out), " games (", source_note, ")")
