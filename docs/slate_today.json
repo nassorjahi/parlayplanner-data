@@ -1,4 +1,5 @@
 {
-  "date": "INIT",
-  "games": []
+  "date": "2026-01-03",
+  "games": [],
+  "note": "scoreboard returned NULL/empty"
 }
