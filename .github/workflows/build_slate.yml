@@ -2,8 +2,8 @@ name: Build Slate JSON
 
 on:
   schedule:
-    - cron: "0 11 * * *"   # daily 11:00 UTC
-  workflow_dispatch:
+    - cron: "0 11 * * *"   # daily 11:00 UTC (6:00 AM EST)
+  workflow_dispatch:       # allows you to run it manually from the GitHub website
 
 jobs:
   build:
@@ -31,6 +31,7 @@ jobs:
 
       - name: Build slate_today.json
         run: |
+          # Note: Ensure this file path matches where your R script is in the repo
           Rscript scripts/build_slate_today.R
 
       - name: Commit and push if changed
@@ -38,5 +39,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/slate_today.json
-          git diff --cached --quiet || git commit -m "Update slate_today.json"
-          git push
+          # Only commit and push if there are actually changes to the data
+          git diff --cached --quiet || (git commit -m "Update slate_today.json" && git push)
