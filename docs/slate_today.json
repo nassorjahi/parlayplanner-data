@@ -1,5 +1,742 @@
 {
   "date": "2026-01-03",
-  "games": [],
-  "note": "version=NBA_DATA_SCOREBOARD_V1 | nba_data_scoreboard_failed_keep_last | url=https://data.nba.com/data/10s/prod/v1/20260103/scoreboard.json"
+  "games": [
+    {
+      "id": "MIN@MIA",
+      "title": "MIN vs MIA",
+      "pointsTop5": [
+        {
+          "playerName": "Josh Richardson",
+          "value": 9.9
+        },
+        {
+          "playerName": "Kevin Love",
+          "value": 8.8
+        },
+        {
+          "playerName": "Nickeil Alexander-Walker",
+          "value": 8
+        },
+        {
+          "playerName": "Nikola Jović",
+          "value": 7.7
+        },
+        {
+          "playerName": "Kyle Anderson",
+          "value": 6.4
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Karl-Anthony Towns",
+          "value": 8.3
+        },
+        {
+          "playerName": "Kevin Love",
+          "value": 6.1
+        },
+        {
+          "playerName": "Anthony Edwards",
+          "value": 5.4
+        },
+        {
+          "playerName": "Jimmy Butler III",
+          "value": 5.3
+        },
+        {
+          "playerName": "Tyler Herro",
+          "value": 5.3
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Mike Conley",
+          "value": 5.9
+        },
+        {
+          "playerName": "Terry Rozier",
+          "value": 5.6
+        },
+        {
+          "playerName": "Anthony Edwards",
+          "value": 5.1
+        },
+        {
+          "playerName": "Jimmy Butler III",
+          "value": 5
+        },
+        {
+          "playerName": "Tyler Herro",
+          "value": 4.5
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Tyler Herro",
+          "value": 3.1
+        },
+        {
+          "playerName": "Duncan Robinson",
+          "value": 2.8
+        },
+        {
+          "playerName": "Anthony Edwards",
+          "value": 2.4
+        },
+        {
+          "playerName": "Mike Conley",
+          "value": 2.4
+        },
+        {
+          "playerName": "Terry Rozier",
+          "value": 2.4
+        }
+      ]
+    },
+    {
+      "id": "PHI@NYK",
+      "title": "PHI vs NYK",
+      "pointsTop5": [
+        {
+          "playerName": "Josh Hart",
+          "value": 9.4
+        },
+        {
+          "playerName": "Miles McBride",
+          "value": 8.3
+        },
+        {
+          "playerName": "Kyle Lowry",
+          "value": 8.1
+        },
+        {
+          "playerName": "Isaiah Hartenstein",
+          "value": 7.8
+        },
+        {
+          "playerName": "Precious Achiuwa",
+          "value": 7.6
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Julius Randle",
+          "value": 9.2
+        },
+        {
+          "playerName": "Mitchell Robinson",
+          "value": 8.5
+        },
+        {
+          "playerName": "Isaiah Hartenstein",
+          "value": 8.3
+        },
+        {
+          "playerName": "Josh Hart",
+          "value": 8.3
+        },
+        {
+          "playerName": "Precious Achiuwa",
+          "value": 6.6
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Jalen Brunson",
+          "value": 6.7
+        },
+        {
+          "playerName": "Tyrese Maxey",
+          "value": 6.2
+        },
+        {
+          "playerName": "Joel Embiid",
+          "value": 5.6
+        },
+        {
+          "playerName": "Julius Randle",
+          "value": 5
+        },
+        {
+          "playerName": "Kyle Lowry",
+          "value": 4.2
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Donte DiVincenzo",
+          "value": 3.5
+        },
+        {
+          "playerName": "Tyrese Maxey",
+          "value": 3
+        },
+        {
+          "playerName": "Jalen Brunson",
+          "value": 2.7
+        },
+        {
+          "playerName": "Buddy Hield",
+          "value": 2.6
+        },
+        {
+          "playerName": "Bojan Bogdanovic",
+          "value": 2.3
+        }
+      ]
+    },
+    {
+      "id": "ATL@TOR",
+      "title": "ATL vs TOR",
+      "pointsTop5": [
+        {
+          "playerName": "Kelly Olynyk",
+          "value": 9.8
+        },
+        {
+          "playerName": "Gradey Dick",
+          "value": 8.5
+        },
+        {
+          "playerName": "Javon Freeman-Liberty",
+          "value": 7
+        },
+        {
+          "playerName": "Jordan Nwora",
+          "value": 7
+        },
+        {
+          "playerName": "Jahmi'us Ramsey",
+          "value": 6.7
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Jalen Johnson",
+          "value": 8.7
+        },
+        {
+          "playerName": "Jakob Poeltl",
+          "value": 8.6
+        },
+        {
+          "playerName": "Scottie Barnes",
+          "value": 8.2
+        },
+        {
+          "playerName": "Onyeka Okongwu",
+          "value": 6.8
+        },
+        {
+          "playerName": "Saddiq Bey",
+          "value": 6.5
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Dejounte Murray",
+          "value": 6.4
+        },
+        {
+          "playerName": "Scottie Barnes",
+          "value": 6.1
+        },
+        {
+          "playerName": "Immanuel Quickley",
+          "value": 4.9
+        },
+        {
+          "playerName": "Kelly Olynyk",
+          "value": 4.4
+        },
+        {
+          "playerName": "Jalen Johnson",
+          "value": 3.6
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Trae Young",
+          "value": 3.2
+        },
+        {
+          "playerName": "Bogdan Bogdanović",
+          "value": 3
+        },
+        {
+          "playerName": "Dejounte Murray",
+          "value": 2.6
+        },
+        {
+          "playerName": "Gary Trent Jr.",
+          "value": 2.5
+        },
+        {
+          "playerName": "Immanuel Quickley",
+          "value": 2.5
+        }
+      ]
+    },
+    {
+      "id": "CHA@CHI",
+      "title": "CHA vs CHI",
+      "pointsTop5": [
+        {
+          "playerName": "Nick Richards",
+          "value": 9.7
+        },
+        {
+          "playerName": "Tre Mann",
+          "value": 9.3
+        },
+        {
+          "playerName": "Andre Drummond",
+          "value": 8.4
+        },
+        {
+          "playerName": "Cody Martin",
+          "value": 7.5
+        },
+        {
+          "playerName": "Vasilije Micic",
+          "value": 7
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Mark Williams",
+          "value": 9.7
+        },
+        {
+          "playerName": "Andre Drummond",
+          "value": 9
+        },
+        {
+          "playerName": "Nick Richards",
+          "value": 8
+        },
+        {
+          "playerName": "Javonte Green",
+          "value": 7.4
+        },
+        {
+          "playerName": "Miles Bridges",
+          "value": 7.3
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "LaMelo Ball",
+          "value": 8
+        },
+        {
+          "playerName": "DeMar DeRozan",
+          "value": 5.3
+        },
+        {
+          "playerName": "Coby White",
+          "value": 5.1
+        },
+        {
+          "playerName": "Vasilije Micic",
+          "value": 4.4
+        },
+        {
+          "playerName": "Tre Mann",
+          "value": 4
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "LaMelo Ball",
+          "value": 3.2
+        },
+        {
+          "playerName": "Coby White",
+          "value": 2.6
+        },
+        {
+          "playerName": "Brandon Miller",
+          "value": 2.5
+        },
+        {
+          "playerName": "Zach LaVine",
+          "value": 2.4
+        },
+        {
+          "playerName": "Miles Bridges",
+          "value": 2.3
+        }
+      ]
+    },
+    {
+      "id": "POR@SAS",
+      "title": "POR vs SAS",
+      "pointsTop5": [
+        {
+          "playerName": "Malaki Branham",
+          "value": 9.2
+        },
+        {
+          "playerName": "Duop Reath",
+          "value": 9.1
+        },
+        {
+          "playerName": "Jabari Walker",
+          "value": 8.9
+        },
+        {
+          "playerName": "RaiQuan Gray",
+          "value": 7.7
+        },
+        {
+          "playerName": "Toumani Camara",
+          "value": 7.5
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Jabari Walker",
+          "value": 7.1
+        },
+        {
+          "playerName": "Jeremy Sochan",
+          "value": 6.4
+        },
+        {
+          "playerName": "Robert Williams III",
+          "value": 6.3
+        },
+        {
+          "playerName": "Keldon Johnson",
+          "value": 5.5
+        },
+        {
+          "playerName": "Zach Collins",
+          "value": 5.4
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Tre Jones",
+          "value": 6.2
+        },
+        {
+          "playerName": "Anfernee Simons",
+          "value": 5.5
+        },
+        {
+          "playerName": "Malcolm Brogdon",
+          "value": 5.5
+        },
+        {
+          "playerName": "Scoot Henderson",
+          "value": 5.4
+        },
+        {
+          "playerName": "Devin Vassell",
+          "value": 4.1
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Anfernee Simons",
+          "value": 3.4
+        },
+        {
+          "playerName": "Devin Vassell",
+          "value": 2.4
+        },
+        {
+          "playerName": "Jerami Grant",
+          "value": 2.1
+        },
+        {
+          "playerName": "Malcolm Brogdon",
+          "value": 2.1
+        },
+        {
+          "playerName": "Shaedon Sharpe",
+          "value": 1.9
+        }
+      ]
+    },
+    {
+      "id": "HOU@DAL",
+      "title": "HOU vs DAL",
+      "pointsTop5": [
+        {
+          "playerName": "Tari Eason",
+          "value": 9.8
+        },
+        {
+          "playerName": "Amen Thompson",
+          "value": 9.5
+        },
+        {
+          "playerName": "Dereck Lively II",
+          "value": 8.8
+        },
+        {
+          "playerName": "Derrick Jones Jr.",
+          "value": 8.6
+        },
+        {
+          "playerName": "Josh Green",
+          "value": 8.2
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Alperen Sengun",
+          "value": 9.3
+        },
+        {
+          "playerName": "Luka Dončić",
+          "value": 9.2
+        },
+        {
+          "playerName": "Jabari Smith Jr.",
+          "value": 8.1
+        },
+        {
+          "playerName": "Daniel Gafford",
+          "value": 7.6
+        },
+        {
+          "playerName": "Tari Eason",
+          "value": 7
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Luka Dončić",
+          "value": 9.8
+        },
+        {
+          "playerName": "Fred VanVleet",
+          "value": 8.1
+        },
+        {
+          "playerName": "Kyrie Irving",
+          "value": 5.2
+        },
+        {
+          "playerName": "Alperen Sengun",
+          "value": 5
+        },
+        {
+          "playerName": "Jalen Green",
+          "value": 3.5
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Luka Dončić",
+          "value": 4.1
+        },
+        {
+          "playerName": "Fred VanVleet",
+          "value": 3.1
+        },
+        {
+          "playerName": "Kyrie Irving",
+          "value": 3
+        },
+        {
+          "playerName": "Tim Hardaway Jr.",
+          "value": 2.7
+        },
+        {
+          "playerName": "Jalen Green",
+          "value": 2.5
+        }
+      ]
+    },
+    {
+      "id": "UTA@GSW",
+      "title": "UTA vs GSW",
+      "pointsTop5": [
+        {
+          "playerName": "Brandin Podziemski",
+          "value": 9.2
+        },
+        {
+          "playerName": "Chris Paul",
+          "value": 9.2
+        },
+        {
+          "playerName": "Draymond Green",
+          "value": 8.6
+        },
+        {
+          "playerName": "Moses Moody",
+          "value": 8.1
+        },
+        {
+          "playerName": "Walker Kessler",
+          "value": 8.1
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "John Collins",
+          "value": 8.5
+        },
+        {
+          "playerName": "Lauri Markkanen",
+          "value": 8.2
+        },
+        {
+          "playerName": "Walker Kessler",
+          "value": 7.5
+        },
+        {
+          "playerName": "Draymond Green",
+          "value": 7.2
+        },
+        {
+          "playerName": "Brandin Podziemski",
+          "value": 5.8
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "Chris Paul",
+          "value": 6.8
+        },
+        {
+          "playerName": "Draymond Green",
+          "value": 6
+        },
+        {
+          "playerName": "Stephen Curry",
+          "value": 5.1
+        },
+        {
+          "playerName": "Jordan Clarkson",
+          "value": 5
+        },
+        {
+          "playerName": "Collin Sexton",
+          "value": 4.9
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Stephen Curry",
+          "value": 4.8
+        },
+        {
+          "playerName": "Klay Thompson",
+          "value": 3.5
+        },
+        {
+          "playerName": "Lauri Markkanen",
+          "value": 3.2
+        },
+        {
+          "playerName": "Keyonte George",
+          "value": 2
+        },
+        {
+          "playerName": "Jordan Clarkson",
+          "value": 1.7
+        }
+      ]
+    },
+    {
+      "id": "BOS@LAC",
+      "title": "BOS vs LAC",
+      "pointsTop5": [
+        {
+          "playerName": "Payton Pritchard",
+          "value": 9.6
+        },
+        {
+          "playerName": "Sam Hauser",
+          "value": 9
+        },
+        {
+          "playerName": "Terance Mann",
+          "value": 8.8
+        },
+        {
+          "playerName": "Al Horford",
+          "value": 8.6
+        },
+        {
+          "playerName": "Bones Hyland",
+          "value": 6.9
+        }
+      ],
+      "reboundsTop5": [
+        {
+          "playerName": "Ivica Zubac",
+          "value": 9.2
+        },
+        {
+          "playerName": "Jayson Tatum",
+          "value": 8.1
+        },
+        {
+          "playerName": "Kristaps Porziņģis",
+          "value": 7.2
+        },
+        {
+          "playerName": "Al Horford",
+          "value": 6.4
+        },
+        {
+          "playerName": "Kawhi Leonard",
+          "value": 6.1
+        }
+      ],
+      "assistsTop5": [
+        {
+          "playerName": "James Harden",
+          "value": 8.5
+        },
+        {
+          "playerName": "Derrick White",
+          "value": 5.2
+        },
+        {
+          "playerName": "Jayson Tatum",
+          "value": 4.9
+        },
+        {
+          "playerName": "Jrue Holiday",
+          "value": 4.8
+        },
+        {
+          "playerName": "Russell Westbrook",
+          "value": 4.5
+        }
+      ],
+      "threesTop5": [
+        {
+          "playerName": "Paul George",
+          "value": 3.3
+        },
+        {
+          "playerName": "Jayson Tatum",
+          "value": 3.1
+        },
+        {
+          "playerName": "Derrick White",
+          "value": 2.7
+        },
+        {
+          "playerName": "James Harden",
+          "value": 2.6
+        },
+        {
+          "playerName": "Sam Hauser",
+          "value": 2.5
+        }
+      ]
+    }
+  ],
+  "note": "Last synced from PC at 10:05 PM"
 }
