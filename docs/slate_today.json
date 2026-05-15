@@ -738,5 +738,5 @@
       ]
     }
   ],
-  "note": "version=NBA_DATA_SCOREBOARD_V1 | nba_data_scoreboard_failed_keep_last | url=https://data.nba.com/data/10s/prod/v1/20260514/scoreboard.json"
+  "note": "version=NBA_DATA_SCOREBOARD_V1 | nba_data_scoreboard_failed_keep_last | url=https://data.nba.com/data/10s/prod/v1/20260515/scoreboard.json"
 }
